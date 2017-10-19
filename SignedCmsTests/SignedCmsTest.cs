@@ -14,6 +14,26 @@ namespace SignedCmsTests
 {
     public class SignedCmsTest
     {
+        private readonly AzureKeyVaultSignConfigurationSet certificateConfiguration;
+
+        public SignedCmsTest()
+        {
+            var creds = TestAzureCredentials.Credentials;
+            if (creds == null)
+            {
+                return;
+            }
+            certificateConfiguration = new AzureKeyVaultSignConfigurationSet
+            {
+                AzureClientId = creds.ClientId,
+                AzureClientSecret = creds.ClientSecret,
+                AzureKeyVaultUrl = creds.AzureKeyVaultUrl,
+                AzureKeyVaultKeyName = creds.AzureKeyVaultCertificateName,
+                Mode = KeyVaultMode.Certificate
+            };
+            
+        }
+
         [ConfigFact]
         public void SignedCmsRoundTripWithLocalCertificate()
         {
@@ -122,7 +142,6 @@ namespace SignedCmsTests
 
 
             var bcCer = DotNetUtilities.FromX509Certificate(netcert);
-            var bcKey = DotNetUtilities.GetRsaKeyPair(netcert.GetRSAPrivateKey());
 
             var store = X509StoreFactory.Create("Certificate/Collection", new X509CollectionStoreParameters(additionals));
 
@@ -149,6 +168,60 @@ namespace SignedCmsTests
             Assert.Equal(content, str);
 
         }
+
+
+        [AzureFact]
+        public async void SignedCmsRoundTripWithKeyVault()
+        {
+            using (var materialized = await KeyVaultConfigurationDiscoverer.Materialize(certificateConfiguration))
+            {
+                var content = "This is some content";
+
+                var publicCert = materialized.PublicCertificate;
+
+                // Get cert
+
+                var chain = new X509Chain();
+                chain.Build(publicCert);
+
+                // Get the chain without the root CA
+                var additionals = chain.ChainElements.Cast<X509ChainElement>()
+                    .Where(ce => ce.Certificate.Issuer != ce.Certificate.SubjectName.Name)
+                    .Select(ce => DotNetUtilities.FromX509Certificate(ce.Certificate))
+                    .ToList();
+
+                chain.Dispose();
+
+
+                var bcCer = DotNetUtilities.FromX509Certificate(publicCert);
+
+                var store = X509StoreFactory.Create("Certificate/Collection", new X509CollectionStoreParameters(additionals));
+
+                var generator = new CmsSignedDataGenerator();
+                var builder = new SignerInfoGeneratorBuilder();
+                var b = builder.Build(new RsaSignatureFactory("SHA256WITHRSA", materialized.ToRSA()), bcCer);
+                generator.AddSignerInfoGenerator(b);
+                generator.AddCertificates(store);
+
+                var msg = new CmsProcessableByteArray(Encoding.UTF8.GetBytes(content));
+                var data = generator.Generate(msg, true);
+
+
+                var encoded = data.GetEncoded();
+
+
+                var signedCms = new SignedCms();
+                signedCms.Decode(encoded);
+                signedCms.CheckSignature(true); // don't validate the certiciate itself here
+
+                var cContent = signedCms.ContentInfo.Content;
+                var str = Encoding.UTF8.GetString(cContent);
+
+                Assert.Equal(content, str);
+            }                
+
+        }
+
 
         static public X509Certificate2 GetLocalSignerCert()
         {
