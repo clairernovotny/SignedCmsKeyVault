@@ -101,6 +101,58 @@ namespace SignedCmsTests
 
         }
 
+        [ConfigFact]
+        public void SignedCmsRoundTripWithBouncyCastleRSA()
+        {
+            var content = "This is some content";
+
+            // Get cert
+
+            var netcert = GetLocalSignerCert();
+
+            var chain = new X509Chain();
+            chain.Build(netcert);
+
+            // Get the chain without the root CA
+            var additionals = chain.ChainElements.Cast<X509ChainElement>()
+                .Where(ce => ce.Certificate.Issuer != ce.Certificate.SubjectName.Name)
+                .Select(ce => DotNetUtilities.FromX509Certificate(ce.Certificate))
+                .ToList();
+
+            chain.Dispose();
+
+
+            var bcCer = DotNetUtilities.FromX509Certificate(netcert);
+            var bcKey = DotNetUtilities.GetRsaKeyPair(netcert.GetRSAPrivateKey());
+
+            var store = X509StoreFactory.Create("Certificate/Collection", new X509CollectionStoreParameters(additionals));
+
+            var generator = new CmsSignedDataGenerator();
+            var builder = new SignerInfoGeneratorBuilder();
+            var b = builder.Build(new KeyVaultSignatureFactory("SHA256WITHRSA", netcert.GetRSAPrivateKey()), bcCer);
+            generator.AddSignerInfoGenerator(b);
+
+            //      generator.AddSigner(bcKey.Private, bcCer, CmsSignedDataGenerator.DigestSha256);
+            generator.AddCertificates(store);
+
+            var msg = new CmsProcessableByteArray(Encoding.UTF8.GetBytes(content));
+            var data = generator.Generate(msg, true);
+
+
+            var encoded = data.GetEncoded();
+
+
+            var signedCms = new SignedCms();
+            signedCms.Decode(encoded);
+            signedCms.CheckSignature(true); // don't validate the certiciate itself here
+
+            var cContent = signedCms.ContentInfo.Content;
+            var str = Encoding.UTF8.GetString(cContent);
+
+            Assert.Equal(content, str);
+
+        }
+
         static public X509Certificate2 GetLocalSignerCert()
         {
             //  Open the My certificate store.
