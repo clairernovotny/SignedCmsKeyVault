@@ -1,3 +1,0 @@
-[submodule "bouncycastle"]
-	path = bouncycastle
-	url = https://github.com/onovotny/bouncycastle-keyvault
