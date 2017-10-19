@@ -77,8 +77,10 @@ namespace SignedCmsTests
 
             var generator = new CmsSignedDataGenerator();
             var builder =  new SignerInfoGeneratorBuilder();
-
-            generator.AddSigner(bcKey.Private, bcCer, CmsSignedDataGenerator.DigestSha256);
+            var b = builder.Build(new Asn1SignatureFactory("SHA256WITHRSA", bcKey.Private), bcCer);
+            generator.AddSignerInfoGenerator(b);
+            
+      //      generator.AddSigner(bcKey.Private, bcCer, CmsSignedDataGenerator.DigestSha256);
             generator.AddCertificates(store);
 
             var msg = new CmsProcessableByteArray(Encoding.UTF8.GetBytes(content));
