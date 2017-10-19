@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.Build.Utilities;
 using Org.BouncyCastle.Cms;
 using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Security;
@@ -131,8 +130,6 @@ namespace SignedCmsTests
             var builder = new SignerInfoGeneratorBuilder();
             var b = builder.Build(new KeyVaultSignatureFactory("SHA256WITHRSA", netcert.GetRSAPrivateKey()), bcCer);
             generator.AddSignerInfoGenerator(b);
-
-            //      generator.AddSigner(bcKey.Private, bcCer, CmsSignedDataGenerator.DigestSha256);
             generator.AddCertificates(store);
 
             var msg = new CmsProcessableByteArray(Encoding.UTF8.GetBytes(content));

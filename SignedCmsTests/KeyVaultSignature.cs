@@ -248,6 +248,7 @@ namespace SignedCmsTests
 		private readonly AlgorithmIdentifier algID;
         private readonly string algorithm;
         private readonly RSA privateKey;
+        private readonly HashAlgorithmName hashAlgorithmName;
 
        
         /// <summary>
@@ -262,6 +263,7 @@ namespace SignedCmsTests
             this.algorithm = algorithm;
             this.privateKey = privateKey;
 			this.algID = X509Utilities.GetSigAlgID (sigOid, algorithm);
+            this.hashAlgorithmName = HashAlgNameFromBc(algorithm);
 		}
 
 		public object AlgorithmDetails
@@ -271,7 +273,24 @@ namespace SignedCmsTests
 
         public IStreamCalculator CreateCalculator()
         {
-            return new SigCalculator(privateKey, HashAlgorithmName.SHA256);
+            return new SigCalculator(privateKey, hashAlgorithmName);
+        }
+
+        // translate alg to HashAlgName
+        static HashAlgorithmName HashAlgNameFromBc(string algorithm)
+        {
+            switch(algorithm.ToUpperInvariant())
+            {
+                case "SHA256WITHRSA":
+                    return HashAlgorithmName.SHA256;
+                case "SHA384WITHRSA":
+                    return HashAlgorithmName.SHA384;
+                case "SHA512WITHRSA":
+                    return HashAlgorithmName.SHA512;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(algorithm));
+            }
         }
 
       
