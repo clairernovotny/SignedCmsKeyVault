@@ -128,7 +128,7 @@ namespace SignedCmsTests
 
             var generator = new CmsSignedDataGenerator();
             var builder = new SignerInfoGeneratorBuilder();
-            var b = builder.Build(new KeyVaultSignatureFactory("SHA256WITHRSA", netcert.GetRSAPrivateKey()), bcCer);
+            var b = builder.Build(new RsaSignatureFactory("SHA256WITHRSA", netcert.GetRSAPrivateKey()), bcCer);
             generator.AddSignerInfoGenerator(b);
             generator.AddCertificates(store);
 

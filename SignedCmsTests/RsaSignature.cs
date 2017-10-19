@@ -243,7 +243,7 @@ namespace SignedCmsTests
     /// Calculator factory class for signature generation in ASN.1 based profiles that use an AlgorithmIdentifier to preserve
     /// signature algorithm details.
     /// </summary>
-	public class KeyVaultSignatureFactory: ISignatureFactory
+	public class RsaSignatureFactory: ISignatureFactory
 	{
 		private readonly AlgorithmIdentifier algID;
         private readonly string algorithm;
@@ -256,7 +256,7 @@ namespace SignedCmsTests
         /// </summary>
         /// <param name="algorithm">The name of the signature algorithm to use.</param>
         /// <param name="privateKey">The private key to be used in the signing operation.</param>
-		public KeyVaultSignatureFactory(string algorithm, RSA privateKey)
+		public RsaSignatureFactory(string algorithm, RSA privateKey)
 		{
 			DerObjectIdentifier sigOid = X509Utilities.GetAlgorithmOid (algorithm);
 
